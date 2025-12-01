@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AR Indoor Guide Prototype</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    html,
+    body {
+      padding: 0;
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #111827 0, #020617 45%, #020617 100%);
+      color: #e5e7eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    a.skip-link {
+      position: absolute;
+      left: -999px;
+      top: 0;
+      padding: 8px 12px;
+      background: #38bdf8;
+      color: #0f172a;
+      border-radius: 999px;
+      margin: 8px;
+      z-index: 1000;
+    }
+
+    a.skip-link:focus {
+      left: 8px;
+    }
+
+    .app-shell {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    main {
+      width: 100%;
+      max-width: 980px;
+    }
+
+    .app-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 780px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card-primary {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 22px;
+      padding: 22px 24px 26px;
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      backdrop-filter: blur(18px);
+    }
+
+    .card-preview {
+      background: radial-gradient(circle at top left, #0f172a 0, #020617 65%);
+      border-radius: 28px;
+      padding: 18px;
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .phone-frame {
+      width: 100%;
+      max-width: 330px;
+      aspect-ratio: 9 / 19;
+      border-radius: 30px;
+      background: #020617;
+      border: 2px solid #111827;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.9);
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phone-notch {
+      height: 14px;
+      width: 40%;
+      background: #020617;
+      border-radius: 0 0 14px 14px;
+      margin: 0 auto 10px;
+      border: 1px solid #0f172a;
+    }
+
+    .phone-screen {
+      flex: 1;
+      border-radius: 22px;
+      background: radial-gradient(circle at top, #111827 0, #020617 55%);
+      border: 1px solid #1f2937;
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .phone-screen-header {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .phone-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: #e5e7eb;
+      margin-top: 8px;
+    }
+
+    .phone-subtitle {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .phone-chip {
+      margin-top: 14px;
+      padding: 6px 10px;
+      font-size: 0.78rem;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #bae6fd;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .phone-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+    }
+
+    .phone-visual {
+      margin-top: 16px;
+      flex: 1;
+      border-radius: 12px;
+      border: 1px solid #1f2937;
+      background: radial-gradient(circle at top, rgba(56, 189, 248, 0.12), transparent 55%),
+        radial-gradient(circle at bottom, rgba(59, 130, 246, 0.2), transparent 60%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .phone-grid {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(
+          to right,
+          rgba(148, 163, 184, 0.11) 1px,
+          transparent 1px
+        ),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.11) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.9;
+    }
+
+    .phone-detection {
+      position: relative;
+      z-index: 1;
+      width: 82%;
+      max-width: 230px;
+      height: 70%;
+      border-radius: 12px;
+      border: 1px solid rgba(248, 250, 252, 0.3);
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.85);
+      background: rgba(15, 23, 42, 0.9);
+      display: grid;
+      grid-template-rows: repeat(3, 1fr);
+      padding: 6px;
+      gap: 4px;
+    }
+
+    .bbox {
+      border-radius: 8px;
+      border: 1px solid rgba(56, 189, 248, 0.7);
+      position: relative;
+      padding: 3px 6px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .bbox.label-door {
+      border-color: rgba(56, 189, 248, 1);
+    }
+
+    .bbox.label-obstacle {
+      border-color: rgba(250, 204, 21, 0.9);
+    }
+
+    .bbox.label-wall {
+      border-color: rgba(148, 163, 184, 0.9);
+    }
+
+    .bbox span {
+      display: block;
+    }
+
+    .bbox-tag {
+      font-weight: 600;
+    }
+
+    .bbox-distance {
+      font-size: 0.68rem;
+      color: #bae6fd;
+    }
+
+    .phone-footer {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+
+    .phone-footer-pill {
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid #1f2937;
+      padding: 4px 8px;
+    }
+
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .app-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .app-subtitle {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+
+    .stepper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-bottom: 16px;
+    }
+
+    .step {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: #020617;
+    }
+
+    .step.current {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.14);
+      color: #e0f2fe;
+    }
+
+    .step-index {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      background: #020617;
+      border: 1px solid #4b5563;
+    }
+
+    .step.current .step-index {
+      background: #38bdf8;
+      color: #0f172a;
+      border-color: transparent;
+    }
+
+    .screen-title {
+      margin-top: 6px;
+      margin-bottom: 8px;
+      font-size: 1.3rem;
+    }
+
+    .body-text {
+      margin: 0 0 16px;
+      font-size: 0.96rem;
+      line-height: 1.65;
+      color: #e5e7eb;
+    }
+
+    .helper-text {
+      margin: 0 0 16px;
+      font-size: 0.86rem;
+      color: #9ca3af;
+    }
+
+    .primaryButton,
+    .secondaryButton {
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: none;
+      font-size: 0.95rem;
+      cursor: pointer;
+      min-width: 120px;
+      text-align: center;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+    }
+
+    .primaryButton {
+      background: linear-gradient(to right, #38bdf8, #0ea5e9);
+      color: #0f172a;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(56, 189, 248, 0.45);
+    }
+
+    .primaryButton:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 30px rgba(56, 189, 248, 0.6);
+    }
+
+    .primaryButton:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .secondaryButton {
+      background: #020617;
+      color: #e5e7eb;
+      border: 1px solid #4b5563;
+    }
+
+    .secondaryButton:hover {
+      background: #02081b;
+      transform: translateY(-1px);
+    }
+
+    .fileLabel {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: #020617;
+      border: 1px solid #64748b;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.1s ease;
+    }
+
+    .fileLabel:hover {
+      background: #020a1f;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.75);
+      transform: translateY(-1px);
+    }
+
+    .fileInput {
+      display: none;
+    }
+
+    .fileName {
+      margin-top: 12px;
+      font-size: 0.88rem;
+      color: #cbd5f5;
+    }
+
+    .buttonRow {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .buttonRow-left {
+      justify-content: space-between;
+    }
+
+    .list {
+      margin: 10px 0 18px 18px;
+      padding: 0;
+      font-size: 0.95rem;
+      color: #d1d5db;
+    }
+
+    .status {
+      font-size: 0.93rem;
+      color: #a5b4fc;
+      margin-top: 6px;
+    }
+
+    .screen {
+      display: none;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .results-grid {
+      margin-top: 12px;
+      border-radius: 10px;
+      border: 1px solid #1f2933;
+      background: #020617;
+      overflow: hidden;
+    }
+
+    .results-grid-header,
+    .results-grid-row {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1.2fr 1fr;
+      padding: 10px 12px;
+      font-size: 0.88rem;
+    }
+
+    .results-grid-header {
+      background: #020819;
+      border-bottom: 1px solid #1f2933;
+      color: #cbd5f5;
+      font-weight: 600;
+    }
+
+    .results-grid-row:nth-child(odd) {
+      background: #020617;
+    }
+
+    .results-grid-row:nth-child(even) {
+      background: #020b27;
+    }
+
+    .results-label {
+      font-size: 0.9rem;
+      color: #cbd5f5;
+      margin-top: 8px;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 520px) {
+      .results-grid-header,
+      .results-grid-row {
+        grid-template-columns: 1.4fr 1fr 1.2fr 1fr;
+        font-size: 0.82rem;
+      }
+
+      .primaryButton,
+      .secondaryButton {
+        width: 100%;
+      }
+
+      .buttonRow,
+      .buttonRow-left {
+        justify-content: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a href="#mainContent" class="skip-link">Skip to main content</a>
+
+  <div class="app-shell">
+    <main id="mainContent">
+      <div class="app-layout">
+        <!-- LEFT: MAIN CARD -->
+        <section class="card-primary">
+          <header class="header-bar">
+            <div>
+              <div class="app-title">AR Indoor Guide</div>
+              <div class="app-subtitle">
+                Upload a video and receive a spatial description designed for blind and low-vision users.
+              </div>
+            </div>
+          </header>
+
+          <!-- Stepper -->
+          <div class="stepper" id="stepper">
+            <div class="step current" data-step="welcome">
+              <div class="step-index">1</div>
+              <span>Welcome</span>
+            </div>
+            <div class="step" data-step="upload">
+              <div class="step-index">2</div>
+              <span>Upload video</span>
+            </div>
+            <div class="step" data-step="processing">
+              <div class="step-index">3</div>
+              <span>Analyze</span>
+            </div>
+            <div class="step" data-step="results">
+              <div class="step-index">4</div>
+              <span>Results</span>
+            </div>
+          </div>
+
+          <!-- WELCOME -->
+          <section id="screen-welcome" class="screen active">
+            <h2 class="screen-title">Welcome</h2>
+            <p class="body-text">
+              This prototype demonstrates the core experience for blind and low-vision users. The user records a short video of the hallway or room, uploads it into this app, and then receives a spoken description of doors, walls, open paths, and obstacles.
+            </p>
+            <p class="helper-text">
+              For this first version, the analysis is simulated. The layout, language, and audio output show how the final AR-powered experience will feel.
+            </p>
+
+            <div class="buttonRow">
+              <button id="getStartedButton" class="primaryButton">
+                Get started
+              </button>
+            </div>
+          </section>
+
+          <!-- UPLOAD -->
+          <section id="screen-upload" class="screen">
+            <h2 class="screen-title">Upload your video</h2>
+            <p class="body-text">
+              Record a five to fifteen second video while slowly panning across the space in front of you. This gives the system enough detail to estimate distances and detect doors and obstacles.
+            </p>
+
+            <label class="fileLabel">
+              <span>Choose video file</span>
+              <input id="videoInput" type="file" accept="video/*" class="fileInput" />
+            </label>
+
+            <p id="fileName" class="fileName">No file selected yet.</p>
+
+            <p class="helper-text">
+              In the full app, this video would be processed by a Python FastAPI backend with a YOLO-tiny model and AR depth data. In this prototype, it stays on your device and represents the upload step.
+            </p>
+
+            <div class="buttonRow buttonRow-left">
+              <button id="backFromUpload" class="secondaryButton">
+                Back
+              </button>
+              <button id="analyzeButton" class="primaryButton" disabled>
+                Analyze video
+              </button>
+            </div>
+          </section>
+
+          <!-- PROCESSING -->
+          <section id="screen-processing" class="screen">
+            <h2 class="screen-title">Analyzing your video</h2>
+            <p class="body-text">
+              The full pipeline will align each frame of your video with ARCore or ARKit depth maps, run a YOLO-tiny model, and then convert detections into distances measured in meters and directions relative to your position.
+            </p>
+
+            <ul class="list">
+              <li>Detecting doors and structural openings along the video path.</li>
+              <li>Measuring approximate distance using AR depth for each detection.</li>
+              <li>Determining whether the central path is clear or partially blocked.</li>
+              <li>Preparing a short spoken summary plus optional detailed descriptions.</li>
+            </ul>
+
+            <p id="processingStatus" class="status">
+              Processing video, please wait.
+            </p>
+          </section>
+
+          <!-- RESULTS -->
+          <section id="screen-results" class="screen">
+            <h2 class="screen-title">Results from your video</h2>
+            <p class="body-text">
+              These values are fixed for the prototype, but they illustrate the level of detail the final system will provide. In practice, the distances and confidence values will come directly from the detection model and AR depth data.
+            </p>
+
+            <p class="results-label">Objects detected in the forward field of view</p>
+            <div class="results-grid">
+              <div class="results-grid-header">
+                <div>Object</div>
+                <div>Direction</div>
+                <div>Distance</div>
+                <div>Confidence</div>
+              </div>
+              <div class="results-grid-row">
+                <div>Door</div>
+                <div>Right, 22°</div>
+                <div>2.8 m</div>
+                <div>0.94</div>
+              </div>
+              <div class="results-grid-row">
+                <div>Wall</div>
+                <div>Left side</div>
+                <div>1.1 m</div>
+                <div>0.97</div>
+              </div>
+              <div class="results-grid-row">
+                <div>Open path</div>
+                <div>Center</div>
+                <div>4.3 m</div>
+                <div>High</div>
+              </div>
+              <div class="results-grid-row">
+                <div>Low obstacle</div>
+                <div>Directly ahead</div>
+                <div>2.0 m</div>
+                <div>0.88</div>
+              </div>
+            </div>
+
+            <p class="helper-text">
+              The user will not need to see this table. Instead, the system will read out a clear, compressed description and pair it with haptic feedback patterns.
+            </p>
+
+            <div class="buttonRow buttonRow-left">
+              <button id="analyzeAnotherButton" class="secondaryButton">
+                Analyze another video
+              </button>
+              <button id="playAudioButton" class="primaryButton">
+                Play audio summary
+              </button>
+            </div>
+          </section>
+        </section>
+
+        <!-- RIGHT: PHONE PREVIEW -->
+        <aside class="card-preview" aria-hidden="true">
+          <div class="phone-frame">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <div>
+                <div class="phone-screen-header">
+                  <span>AR Indoor Guide</span>
+                  <span>Prototype</span>
+                </div>
+                <div class="phone-title">Forward view</div>
+                <div class="phone-subtitle">
+                  Simulated detection with estimated distances.
+                </div>
+                <div class="phone-chip">
+                  <span class="phone-chip-dot"></span>
+                  AR depth alignment
+                </div>
+              </div>
+
+              <div class="phone-visual">
+                <div class="phone-grid"></div>
+                <div class="phone-detection">
+                  <div class="bbox label-door">
+                    <span class="bbox-tag">Door</span>
+                    <span class="bbox-distance">2.8 m · right</span>
+                  </div>
+                  <div class="bbox label-wall">
+                    <span class="bbox-tag">Wall</span>
+                    <span class="bbox-distance">1.1 m · left</span>
+                  </div>
+                  <div class="bbox label-obstacle">
+                    <span class="bbox-tag">Obstacle</span>
+                    <span class="bbox-distance">2.0 m · ahead</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="phone-footer">
+                <div class="phone-footer-pill">
+                  Audio guidance ready
+                </div>
+                <div>Tap once to hear layout</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function updateStepper(stepId) {
+      var steps = document.querySelectorAll(".step");
+      for (var i = 0; i < steps.length; i++) {
+        steps[i].classList.remove("current");
+      }
+      var step = document.querySelector('.step[data-step="' + stepId + '"]');
+      if (step) {
+        step.classList.add("current");
+      }
+    }
+
+    function showScreen(id) {
+      var screens = document.querySelectorAll(".screen");
+      for (var i = 0; i < screens.length; i++) {
+        screens[i].classList.remove("active");
+      }
+      var target = document.getElementById(id);
+      if (target) {
+        target.classList.add("active");
+      }
+    }
+
+    function goToScreen(id) {
+      showScreen(id);
+      if (id === "screen-welcome") updateStepper("welcome");
+      if (id === "screen-upload") updateStepper("upload");
+      if (id === "screen-processing") updateStepper("processing");
+      if (id === "screen-results") updateStepper("results");
+    }
+
+    function startProcessing() {
+      goToScreen("screen-processing");
+      var status = document.getElementById("processingStatus");
+      status.textContent = "Processing video, please wait.";
+
+      setTimeout(function () {
+        status.textContent = "Aligning video frames with AR depth maps...";
+      }, 1200);
+
+      setTimeout(function () {
+        status.textContent = "Detecting doors, walls, and obstacles...";
+      }, 2300);
+
+      setTimeout(function () {
+        goToScreen("screen-results");
+      }, 3400);
+    }
+
+    function playAudioSummary() {
+      var text =
+        "Here is a sample summary of what the app would say. " +
+        "There is a door ahead to your right at around two point eight meters. " +
+        "There is a wall on your left at about one point one meters. " +
+        "There is a clear path forward for roughly four point three meters. " +
+        "There is a low obstacle directly ahead at around two meters. " +
+        "The safest option is to walk forward and slightly to the right toward the door, slowing down as you approach the obstacle.";
+      var speech = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(speech);
+    }
+
+    function handleFileChange(event) {
+      var fileInput = event.target;
+      var file = fileInput.files && fileInput.files[0];
+      var fileNameEl = document.getElementById("fileName");
+      var analyzeButton = document.getElementById("analyzeButton");
+
+      if (file) {
+        fileNameEl.textContent = "Selected file: " + file.name;
+        analyzeButton.disabled = false;
+      } else {
+        fileNameEl.textContent = "No file selected yet.";
+        analyzeButton.disabled = true;
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      var getStartedButton = document.getElementById("getStartedButton");
+      var videoInput = document.getElementById("videoInput");
+      var backFromUpload = document.getElementById("backFromUpload");
+      var analyzeButton = document.getElementById("analyzeButton");
+      var analyzeAnotherButton = document.getElementById("analyzeAnotherButton");
+      var playAudioButton = document.getElementById("playAudioButton");
+
+      if (getStartedButton) {
+        getStartedButton.addEventListener("click", function () {
+          goToScreen("screen-upload");
+        });
+      }
+
+      if (videoInput) {
+        videoInput.addEventListener("change", handleFileChange);
+      }
+
+      if (backFromUpload) {
+        backFromUpload.addEventListener("click", function () {
+          goToScreen("screen-welcome");
+        });
+      }
+
+      if (analyzeButton) {
+        analyzeButton.addEventListener("click", function () {
+          startProcessing();
+        });
+      }
+
+      if (analyzeAnotherButton) {
+        analyzeAnotherButton.addEventListener("click", function () {
+          goToScreen("screen-upload");
+        });
+      }
+
+      if (playAudioButton) {
+        playAudioButton.addEventListener("click", function () {
+          playAudioSummary();
+        });
+      }
+    });
+  </script>
+</body>
+</html>
